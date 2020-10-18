@@ -1,0 +1,80 @@
+body{
+    background: #333;
+    font-family: sans-serif;
+    color: #f0f0f0;
+}
+#title {
+    font-size: 24pt;
+    text-shadow: 1px 1px #000;
+}
+.version {
+    font-size: 75%;
+    font-style: italic;
+}
+.vision {
+    border: 50px solid #e1c631;
+    background-color: #365fd9;
+    height: 80px;
+    border-radius:50%;
+    width: 80px;
+}
+.vision-night {
+    border: 50px solid #365fd9;
+    background-color: #e1c631;
+    height: 80px;
+    border-radius:50%;
+    width: 80px;
+}
+.vision-slark {
+    height: 80px;
+    border-radius:50%;
+    width: 80px;
+    background-image: repeating-linear-gradient(
+        45deg,
+        #365fd9,
+        #365fd9 25px,
+        #e1c631 25px,
+        #e1c631 50px
+    );
+}
+.hero {
+    width: 200px;
+    height: 200px;
+    position: relative;
+    float:left;
+    border: 1px;
+    margin-bottom: 1em;
+}
+.icon {
+    position: absolute;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    top: 84px;
+    left: 84px;
+}
+.hero-name, .value-day, .value-night {
+    font-size: 8pt;
+    text-shadow: 1px 1px #000;
+    z-index: 6;
+    margin-right: 6px;
+}
+.stats {
+    top: 4px;
+    position: absolute;
+}
+.value-day {
+    color: #e1c631;
+
+}
+.value-night {
+    color: #365fd9;
+
+}
+
+.value-day::before {
+  content: "Day: ";
+}
+.value-night::before {
+  content: "Night: ";
+}
