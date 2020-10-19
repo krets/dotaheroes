@@ -4,7 +4,7 @@ from config import CONFIG
 
 LOG = logging.getLogger('krets')
 
-def get():
+def get(npc_type='npc_heroes'):
     """ parser for npc_heroes.txt written without spec. Seems to work.
     """
     data = {}
@@ -12,11 +12,12 @@ def get():
     cursor = data
     stack = []
     comment_marker = '//'
-    with open(CONFIG['npc_heroes'], 'rb') as fh:
+    data_file = CONFIG['npc_file'] % npc_type
+    with open(data_file, 'rb') as fh:
         for i, raw_line in enumerate(fh):
             line = raw_line.decode().strip()
             if comment_marker in line:
-                line, _ = line.split(comment_marker, 2)
+                line, _ = line.split(comment_marker, 1)
             parts = [_.strip() for _ in line.split("\t") if _.strip()]
             if not parts:
                 continue
@@ -32,7 +33,7 @@ def get():
                 continue
             if len(parts) > 2:
                 # Seems like the slardar line has a misplaced tab
-                LOG.warning("Bad data on line: %s of %s: %s", i+1, CONFIG['npc_heroes'], raw_line)
+                LOG.warning("Bad data on line: %s of %s: %s", i+1, data_file, raw_line)
 
             key, value = [_.strip('"') for _ in parts[:2]]
             cursor[key] = value

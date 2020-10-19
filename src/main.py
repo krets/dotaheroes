@@ -1,6 +1,9 @@
 import urllib.parse
+import logging
 
-import npcheroes
+LOG = logging.getLogger('dotaheroes')
+
+import npcdata
 
 DOTA_VERSION = "7.27d"
 
@@ -15,12 +18,69 @@ HEADER = f"""<!DOCTYPE html>
 """
 FOOTER = "</body></html>"
 
+_TYPES = {
+    'FIElD_INTEGER': int,
+    'FIELD_FLOAT': float,
+}
+_SPECIAL_IGNORE = [
+    'LinkedSpecialBonus',
+    'ad_linked_ability',
+    'linked_ad_abilities',
+    'LinkedSpecialBonusField',
+    'LinkedSpecialBonusOperation',
+    'levelkey',
+    'var_type']
+_HERO_PREFIX = 'npc_dota_hero_'
+
+def _special(ability):
+    """ Evaluated the special fields and return a dict """
+    details = {}
+    special = list(ability.get('AbilitySpecial', {}).values())
+    _linked_special = 'LinkedSpecialBonus'
+    for item in special:
+        convert = _TYPES.get(item.get('var_type',''), lambda x:x)
+        for k, v in item.items():
+            if k in _SPECIAL_IGNORE:
+                continue
+            try:
+                details[k] = [convert(_) for _ in v.split()]
+            except ValueError as error:
+                pass
+                raise
+    return details
+
+
+def _vision_bonuses(hero):
+    bonuses = {}
+    name = hero['_key'][len(_HERO_PREFIX):]
+    talents = {}
+    for ability, details in hero['Abilities'].items():
+        _ = {}
+        for key, v in details.items():
+            if 'bonus' in key and 'vision' in key:
+                _[key] = v
+        if _:
+            _['duration'] = details.get('duration')
+            bonuses[ability[len(name):].replace('_', ' ').title()] = _
+        if 'special_bonus' in ability and 'vision' in ability:
+
+            for daynight in ('day', 'night'):
+                if daynight in ability:
+                    if daynight not in talents:
+                        talents[daynight] = []
+                    talents[daynight].append(int(details['value'][0]))
+    if talents:
+        bonuses['talents'] = talents
+    return bonuses
+
+
 def hero_details():
     default_name = 'npc_dota_hero_base'
     veto = ['npc_dota_hero_target_dummy', default_name]
     rows = []
-    data = npcheroes.get()
+    data = npcdata.get('npc_heroes')
     heroes = data['DOTAHeroes']
+    hero_abilities = npcdata.get('npc_abilities')['DOTAAbilities']
     default = {k:v for k, v in heroes[default_name].items() if isinstance(v, str)}
     for k, v in default.items():
         if isinstance(v, (str)):
@@ -29,16 +89,19 @@ def hero_details():
             except ValueError:
                 default[k] = v
     for key, val in heroes.items():
-        if key in veto or not key.startswith('npc_dota_hero'):
+        if key in veto or not key.startswith(_HERO_PREFIX):
             continue
         row = default.copy()
         row['_key'] = key
+        row['Abilities'] = {}
         for k, v in val.items():
             if isinstance(v, (str)):
                 try:
                     row[k] = float(v)
                 except ValueError:
                     row[k] = v
+            if k.startswith('Ability') and k[-1].isdigit():
+                row['Abilities'][v] = _special(hero_abilities.get(v, {}))
         rows.append(row)
     return rows
 
@@ -61,6 +124,9 @@ def main():
             # height = width = smallest_vision/10<br/>
             # border = (largest_vision - smallest_vision)/2<br/>
 
+            bonuses = _vision_bonuses(row)
+            if bonuses:
+                LOG.debug("Yay, bonus vision for %s: %s", name, bonuses)
             smallest_vision, largest_vision = sorted([vision_day, vision_night])
             width = int(smallest_vision/10)
             border = int((largest_vision - smallest_vision)/20)
@@ -84,4 +150,7 @@ def main():
         out.write(FOOTER)
 
 if __name__ == '__main__':
+    LOG.addHandler(logging.StreamHandler())
+    LOG.handlers[-1].setFormatter(logging.Formatter(logging.BASIC_FORMAT))
+    LOG.setLevel(logging.DEBUG)
     main()
