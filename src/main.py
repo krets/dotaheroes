@@ -61,16 +61,27 @@ def _vision_bonuses(hero):
                 _[key] = v
         if _:
             _['duration'] = details.get('duration')
-            bonuses[ability[len(name):].replace('_', ' ').title()] = _
+            bonuses[ability[len(name):].replace('_', ' ').title().strip(' ')] = _
         if 'special_bonus' in ability and 'vision' in ability:
+            level = 25
+            for key, val in hero.items():
+                if val == ability:
+                    number = int(''.join([_ for _ in key if _.isdigit()]))
+                    if 9 < number < 12:
+                        level = 10
+                    elif 11 < number < 14:
+                        level = 15
+                    elif 13 < number < 16:
+                        level = 20
 
-            for daynight in ('day', 'night'):
+
+            for daynight in ('day', 'night', ''):
                 if daynight in ability:
-                    if daynight not in talents:
-                        talents[daynight] = []
-                    talents[daynight].append(int(details['value'][0]))
+                    break
+            talents[f"Level {level} {daynight} vision"] = int(details['value'][0])
+
     if talents:
-        bonuses['talents'] = talents
+        bonuses['talent'] = talents
     return bonuses
 
 
