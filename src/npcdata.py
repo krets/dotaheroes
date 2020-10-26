@@ -4,8 +4,53 @@ from config import CONFIG
 
 LOG = logging.getLogger('krets')
 
+_TYPES = {
+    'FIElD_INTEGER': int,
+    'FIELD_FLOAT': float,
+}
+_SPECIAL_IGNORE = [
+    'LinkedSpecialBonus',
+    'ad_linked_ability',
+    'linked_ad_abilities',
+    'LinkedSpecialBonusField',
+    'LinkedSpecialBonusOperation',
+    'levelkey',
+    'var_type']
+
 def get(npc_type='npc_heroes'):
+
+    data = _read(npc_type)
+    _clean(data)
+    return data
+
+def _clean(data):
+    """ Expecting string keys for any level of the npc data
+    """
+    if data and all([_.isdigit() for _ in data.keys()]) and 'var_type' in list(data.values())[0]:
+        return _special_vars(data)
+
+    for key, val in data.items():
+        if isinstance(val, dict):
+            data[key] = _clean(val)
+    return data
+
+def _special_vars(data):
+    result = {}
+    for item in data.values():
+        convert = _TYPES.get(item.get('var_type', ''), lambda x: x)
+        for k, v in item.items():
+            if k in _SPECIAL_IGNORE:
+                continue
+            try:
+                result[k] = [convert(_) for _ in v.split()]
+            except (ValueError, AttributeError) as error:
+                raise
+    return result
+
+def _read(npc_type):
     """ parser for npc_heroes.txt written without spec. Seems to work.
+
+    Builds a stack to allow arbitrary depth of data structure.
     """
     data = {}
     key = None
@@ -33,13 +78,13 @@ def get(npc_type='npc_heroes'):
                 continue
             if len(parts) > 2:
                 # Seems like the slardar line has a misplaced tab
-                LOG.warning("Bad data on line: %s of %s: %s", i+1, data_file, raw_line)
+                LOG.warning("Bad data on line: %s of %s: %s", i + 1, data_file, raw_line)
 
             key, value = [_.strip('"') for _ in parts[:2]]
             cursor[key] = value
             key = None
-
     return data
+
 
 def main():
     LOG.addHandler(logging.StreamHandler())

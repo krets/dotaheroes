@@ -18,50 +18,22 @@ HEADER = f"""<!DOCTYPE html>
 """
 FOOTER = "</body></html>"
 
-_TYPES = {
-    'FIElD_INTEGER': int,
-    'FIELD_FLOAT': float,
-}
-_SPECIAL_IGNORE = [
-    'LinkedSpecialBonus',
-    'ad_linked_ability',
-    'linked_ad_abilities',
-    'LinkedSpecialBonusField',
-    'LinkedSpecialBonusOperation',
-    'levelkey',
-    'var_type']
 _HERO_PREFIX = 'npc_dota_hero_'
-
-def _special(ability):
-    """ Evaluated the special fields and return a dict """
-    details = {}
-    special = list(ability.get('AbilitySpecial', {}).values())
-    _linked_special = 'LinkedSpecialBonus'
-    for item in special:
-        convert = _TYPES.get(item.get('var_type',''), lambda x:x)
-        for k, v in item.items():
-            if k in _SPECIAL_IGNORE:
-                continue
-            try:
-                details[k] = [convert(_) for _ in v.split()]
-            except ValueError as error:
-                pass
-                raise
-    return details
 
 
 def _vision_bonuses(hero):
     bonuses = {}
     name = hero['_key'][len(_HERO_PREFIX):]
-    talents = {}
     for ability, details in hero['Abilities'].items():
         _ = {}
-        for key, v in details.items():
+        for key, v in details.get('AbilitySpecial', {}).items():
             if 'bonus' in key and 'vision' in key:
-                _[key] = v
+                _[key] = [int(_) for _ in v]
         if _:
             _['duration'] = details.get('duration')
             bonuses[ability[len(name):].replace('_', ' ').title().strip(' ')] = _
+
+        # talent bonuses
         if 'special_bonus' in ability and 'vision' in ability:
             level = 25
             for key, val in hero.items():
@@ -74,16 +46,12 @@ def _vision_bonuses(hero):
                     elif 13 < number < 16:
                         level = 20
 
-
             for daynight in ('day', 'night', ''):
                 if daynight in ability:
                     break
-            talents[f"Level {level} {daynight} vision"] = int(details['value'][0])
+            bonuses[f"Talent: Level {level} {daynight} vision"] = {ability: [int(details['AbilitySpecial']['value'][0])]}
 
-    if talents:
-        bonuses['talent'] = talents
     return bonuses
-
 
 def hero_details():
     default_name = 'npc_dota_hero_base'
@@ -112,7 +80,7 @@ def hero_details():
                 except ValueError:
                     row[k] = v
             if k.startswith('Ability') and k[-1].isdigit():
-                row['Abilities'][v] = _special(hero_abilities.get(v, {}))
+                row['Abilities'][v] = hero_abilities.get(v, {})
         rows.append(row)
     return rows
 
@@ -159,6 +127,41 @@ def main():
         """
             out.write(hero_attr)
         out.write(FOOTER)
+
+
+def extract_visions(hero):
+    vision_night = hero['VisionNighttimeRange']
+    vision_day = hero['VisionDaytimeRange']
+
+    bonuses = _vision_bonuses(hero)
+    # vision: amount, is_night_vision, requires_active, description
+    visions = [
+        (vision_night, True, False, None),
+        (vision_day, False, False, None),
+    ]
+    if vision_day == vision_night:
+        visions = [(vision_night, None, False, None)]
+
+    for bonus, details in bonuses.items():
+        _active_key = 'duration'
+        requires_active = bool(details.get(_active_key))
+        for description, distances in details.items():
+            if description == _active_key:
+                continue
+            night_only = 'night' in description
+            for level, amount in enumerate(distances):
+                comment = bonus
+                if level > 0:
+                    comment += " level %d" % (level + 1)
+                visions.append((amount + vision_night, True, requires_active, comment))
+                if not night_only:
+                    comment += " day"
+                    visions.append((amount + vision_day, False, requires_active, comment))
+    visions.sort(reverse=True)
+    if bonuses:
+        LOG.debug("Yay, bonus vision for %s: %s", hero['workshop_guide_name'], bonuses)
+    return visions
+
 
 if __name__ == '__main__':
     LOG.addHandler(logging.StreamHandler())
