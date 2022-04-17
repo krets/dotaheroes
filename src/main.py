@@ -93,32 +93,41 @@ def main():
     with open('../out/out.html', 'w') as out:
         out.write(HEADER)
 
-        for row in rows:
-            img = 'images/%s_minimap_icon.png' % (urllib.parse.quote(row["workshop_guide_name"].replace(' ', '_')))
-            name = row['workshop_guide_name']
-            vision_night = row['VisionNighttimeRange']
-            vision_day = row['VisionDaytimeRange']
+        for hero in rows:
+            img = 'images/%s_minimap_icon.png' % (urllib.parse.quote(hero["workshop_guide_name"].replace(' ', '_')))
+            name = hero['workshop_guide_name']
+            vision_night = hero['VisionNighttimeRange']
+            vision_day = hero['VisionDaytimeRange']
+            visions = extract_visions(hero)
 
-            ## Vision
-            # height = width = smallest_vision/10<br/>
-            # border = (largest_vision - smallest_vision)/2<br/>
+            hero_attr = f'<div class="hero"><img class="icon" src="{img}" title="{name}">'
 
-            bonuses = _vision_bonuses(row)
-            if bonuses:
-                LOG.debug("Yay, bonus vision for %s: %s", name, bonuses)
-            smallest_vision, largest_vision = sorted([vision_day, vision_night])
-            width = int(smallest_vision/10)
-            border = int((largest_vision - smallest_vision)/20)
-            padding = int((200 - largest_vision / 10)/2)
-            class_name = 'vision'
-            if vision_night > vision_day:
-                class_name = 'vision-night'
-            if vision_day == vision_night:
-                class_name = 'vision-slark'
-            hero_attr = f"""<div class="hero">
-            <img class="icon" src="{img}" title="{name}">
-            <div class="{class_name}" title="Vision day: {vision_day:.0f} night: {vision_night:.0f}" style="margin:{padding}px; border-width: {border}px; height: {width}px; width: {width}px">
-            </div>
+            for i, details in enumerate(visions):
+                amount, is_night_vision, requires_active, title = details
+                classes = ['vision']
+                if title is None:
+                    title = 'base vision'
+                    classes.append('base')
+
+                if is_night_vision is None:
+                    classes.append('slark')
+                elif is_night_vision:
+                    classes.append('night')
+                else:
+                    classes.append('day')
+
+                if requires_active:
+                    classes.append('active')
+
+                width = int(amount)/10
+                margin = (200 - width)/2
+                width -=2 # border on all items.
+                class_str = ' '.join(classes)
+                hero_attr += (
+                    f'<div class="{class_str}" title="{title}" style="margin:{margin}px; '
+                    f'height: {width}px; width: {width}px; z-index: {i}"></div>')
+
+            hero_attr += f"""
             <div class='stats'>
                 <span class='hero-name'>{name}</span><br/><span class='value-day'>{vision_day:.0f}</span><span class='value-night'>{vision_night:.0f}</span>
             </div>

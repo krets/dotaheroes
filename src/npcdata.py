@@ -1,4 +1,7 @@
 import logging
+import io
+
+import vpk
 
 from config import CONFIG
 
@@ -11,17 +14,18 @@ _TYPES = {
 _SPECIAL_IGNORE = [
     'LinkedSpecialBonus',
     'ad_linked_ability',
+    'ad_linked_abilities',
     'linked_ad_abilities',
     'LinkedSpecialBonusField',
     'LinkedSpecialBonusOperation',
     'levelkey',
-    'var_type']
+    'var_type',
+    'DamageTypeTooltip'
+]
 
 def get(npc_type='npc_heroes'):
-
     data = _read(npc_type)
-    _clean(data)
-    return data
+    return _clean(data)
 
 def _clean(data):
     """ Expecting string keys for any level of the npc data
@@ -47,7 +51,7 @@ def _special_vars(data):
                 raise
     return result
 
-def _read(npc_type):
+def _extract(handle):
     """ parser for npc_heroes.txt written without spec. Seems to work.
 
     Builds a stack to allow arbitrary depth of data structure.
@@ -57,33 +61,39 @@ def _read(npc_type):
     cursor = data
     stack = []
     comment_marker = '//'
-    data_file = CONFIG['npc_file'] % npc_type
-    with open(data_file, 'rb') as fh:
-        for i, raw_line in enumerate(fh):
+    for i, raw_line in enumerate(handle):
+        if hasattr(raw_line, 'decode'):
             line = raw_line.decode().strip()
-            if comment_marker in line:
-                line, _ = line.split(comment_marker, 1)
-            parts = [_.strip() for _ in line.split("\t") if _.strip()]
-            if not parts:
-                continue
-            if len(parts) == 1:
-                if parts[0] == '{' and key is not None:
-                    cursor[key] = {}
-                    stack.append(cursor)
-                    cursor = cursor[key]
-                elif parts[0] == '}':
+        else:
+            line = raw_line
+        if comment_marker in line:
+            line, _ = line.split(comment_marker, 1)
+        parts = [_.strip() for _ in line.split("\t") if _.strip()]
+        if not parts:
+            continue
+        if len(parts) == 1:
+            if parts[0] == '{' and key is not None:
+                cursor[key] = {}
+                stack.append(cursor)
+                cursor = cursor[key]
+            elif parts[0] == '}':
+                if stack:
                     cursor = stack.pop()
-                else:
-                    key = parts[0].strip('"')
-                continue
-            if len(parts) > 2:
-                # Seems like the slardar line has a misplaced tab
-                LOG.warning("Bad data on line: %s of %s: %s", i + 1, data_file, raw_line)
+            else:
+                key = parts[0].strip('"')
+            continue
+        if len(parts) > 2:
+            # Seems like the slardar line has a misplaced tab
+            LOG.warning("Bad data on line: %s : %s", i + 1, raw_line)
 
-            key, value = [_.strip('"') for _ in parts[:2]]
-            cursor[key] = value
-            key = None
+        key, value = [_.strip('"') for _ in parts[:2]]
+        cursor[key] = value
+        key = None
     return data
+
+def _read(npc_type):
+    pak = vpk.open(CONFIG['pak01_dir'])
+    return _extract(io.StringIO(pak[CONFIG['npc_file'] % npc_type].read().decode('utf8')))
 
 
 def main():
