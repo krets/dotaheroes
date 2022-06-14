@@ -2,6 +2,7 @@ import logging
 import io
 
 import vpk
+import vdf
 
 from config import CONFIG
 
@@ -23,8 +24,26 @@ _SPECIAL_IGNORE = [
     'DamageTypeTooltip'
 ]
 
+_PAK_CACHE = {}
+
+def _game_version():
+    data = _pak("resource/localization/patchnotes/patchnotes_english.txt")
+    parts = [_.split('_') for _ in data['patch']]
+    versions = list(sorted(set([tuple(_[2:4]) for _ in parts])))
+    return '.'.join(versions[-1])
+
+def _pak(key):
+    pak_obj_key = '_pak_obj'
+    pak = _PAK_CACHE.get(pak_obj_key)
+    if pak is None:
+        pak = _PAK_CACHE[pak_obj_key] = vpk.open(CONFIG['pak01_dir'])
+    data = _PAK_CACHE.get(key)
+    if data is None:
+        data = _PAK_CACHE[key] = vdf.parse(io.StringIO(pak[key].read().decode('utf8')))
+    return data
+
 def get(npc_type='npc_heroes'):
-    data = _read(npc_type)
+    data = _pak(CONFIG['npc_file'] % npc_type)
     return _clean(data)
 
 def _clean(data):
@@ -51,55 +70,12 @@ def _special_vars(data):
                 raise
     return result
 
-def _extract(handle):
-    """ parser for npc_heroes.txt written without spec. Seems to work.
-
-    Builds a stack to allow arbitrary depth of data structure.
-    """
-    data = {}
-    key = None
-    cursor = data
-    stack = []
-    comment_marker = '//'
-    for i, raw_line in enumerate(handle):
-        if hasattr(raw_line, 'decode'):
-            line = raw_line.decode().strip()
-        else:
-            line = raw_line
-        if comment_marker in line:
-            line, _ = line.split(comment_marker, 1)
-        parts = [_.strip() for _ in line.split("\t") if _.strip()]
-        if not parts:
-            continue
-        if len(parts) == 1:
-            if parts[0] == '{' and key is not None:
-                cursor[key] = {}
-                stack.append(cursor)
-                cursor = cursor[key]
-            elif parts[0] == '}':
-                if stack:
-                    cursor = stack.pop()
-            else:
-                key = parts[0].strip('"')
-            continue
-        if len(parts) > 2:
-            # Seems like the slardar line has a misplaced tab
-            LOG.warning("Bad data on line: %s : %s", i + 1, raw_line)
-
-        key, value = [_.strip('"') for _ in parts[:2]]
-        cursor[key] = value
-        key = None
-    return data
-
-def _read(npc_type):
-    pak = vpk.open(CONFIG['pak01_dir'])
-    return _extract(io.StringIO(pak[CONFIG['npc_file'] % npc_type].read().decode('utf8')))
-
 
 def main():
     LOG.addHandler(logging.StreamHandler())
     LOG.handlers[0].setFormatter(logging.Formatter(logging.BASIC_FORMAT))
     LOG.setLevel(logging.DEBUG)
+    version = _game_version()
     data = get()
     pass
 

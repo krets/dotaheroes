@@ -12,23 +12,29 @@ body{
     font-style: italic;
 }
 .vision {
-    border: 50px solid #e1c631;
     background-color: #365fd9;
-    height: 80px;
-    border-radius:50%;
-    width: 80px;
+    border-radius: 50%;
+    border-width: 1px;
+    border-color: #365fd9;
+    position: absolute;
+    opacity: .6;
+    transform: rotate(45deg);
 }
-.vision-night {
-    border: 50px solid #365fd9;
+
+.base {
+    opacity: 1.0;
+}
+.night {
+    background-color: #365fd9;
+}
+.day {
     background-color: #e1c631;
-    height: 80px;
-    border-radius:50%;
-    width: 80px;
 }
-.vision-slark {
-    height: 80px;
-    border-radius:50%;
-    width: 80px;
+.active {
+    opacity: .3;
+}
+.talent {}
+.slark {
     background-image: repeating-linear-gradient(
         45deg,
         #365fd9,
@@ -52,6 +58,7 @@ body{
     margin-right: auto;
     top: 84px;
     left: 84px;
+    z-index: 10;
 }
 .hero-name, .value-day, .value-night {
     font-size: 8pt;
@@ -62,6 +69,7 @@ body{
 .stats {
     top: 4px;
     position: absolute;
+    z-index: 10;
 }
 .value-day {
     color: #e1c631;

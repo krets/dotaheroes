@@ -14,7 +14,7 @@ HEADER = f"""<!DOCTYPE html>
 <link rel="stylesheet" href="main.css">
 </head>
 <body>
-<div id="title"> Dota Hero Vision <span class="version">(v{DOTA_VERSION})<span></div>
+<div id="title"> Dota Hero Vision <span class="version">(v%s)<span></div>
 """
 FOOTER = "</body></html>"
 
@@ -60,7 +60,7 @@ def hero_details():
     data = npcdata.get('npc_heroes')
     heroes = data['DOTAHeroes']
     hero_abilities = npcdata.get('npc_abilities')['DOTAAbilities']
-    default = {k:v for k, v in heroes[default_name].items() if isinstance(v, str)}
+    default = {k: v for k, v in heroes[default_name].items() if isinstance(v, str)}
     for k, v in default.items():
         if isinstance(v, (str)):
             try:
@@ -89,9 +89,9 @@ def main():
     data = []
     rows = hero_details()
     data.sort(key=lambda x: x['HERO'])
-
+    version = npcdata._game_version()
     with open('../out/out.html', 'w') as out:
-        out.write(HEADER)
+        out.write(HEADER % version)
 
         for hero in rows:
             img = 'images/%s_minimap_icon.png' % (urllib.parse.quote(hero["workshop_guide_name"].replace(' ', '_')))
