@@ -17,8 +17,11 @@ body{
     border-width: 1px;
     border-color: #365fd9;
     position: absolute;
-    opacity: .6;
+
     transform: rotate(45deg);
+}
+.vision.multiple {
+    opacity: .6;
 }
 
 .base {

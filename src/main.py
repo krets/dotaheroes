@@ -26,9 +26,17 @@ def _vision_bonuses(hero):
     name = hero['_key'][len(_HERO_PREFIX):]
     for ability, details in hero['Abilities'].items():
         _ = {}
-        for key, v in details.get('AbilitySpecial', {}).items():
-            if 'bonus' in key and 'vision' in key:
-                _[key] = [int(_) for _ in v]
+        if ability in ['templar_assassin_trap', 'templar_assassin_psionic_trap']:
+            LOG.debug("Ignoring %s Bonus Vision" % ability)
+            continue
+        for subvalue_key in ('AbilitySpecial', 'AbilityValues'):
+            for key, v in details.get(subvalue_key, {}).items():
+                if 'bonus' in key and 'vision' in key:
+                    if isinstance(v, (dict)) and 'value' in v:
+                        v = v['value']
+                    if ' ' in v:
+                        v = v.split(' ')
+                    _[key] = [int(__) for __ in v]
         if _:
             _['duration'] = details.get('duration')
             bonuses[ability[len(name):].replace('_', ' ').title().strip(' ')] = _
@@ -105,6 +113,8 @@ def main():
             for i, details in enumerate(visions):
                 amount, is_night_vision, requires_active, title = details
                 classes = ['vision']
+                if len(visions) > 2:
+                    classes.append('multiple')
                 if title is None:
                     title = 'base vision'
                     classes.append('base')
@@ -145,11 +155,11 @@ def extract_visions(hero):
     bonuses = _vision_bonuses(hero)
     # vision: amount, is_night_vision, requires_active, description
     visions = [
-        (vision_night, True, False, None),
-        (vision_day, False, False, None),
+        (vision_night, True, False, ''),
+        (vision_day, False, False, ''),
     ]
     if vision_day == vision_night:
-        visions = [(vision_night, None, False, None)]
+        visions = [(vision_night, None, False, '')]
 
     for bonus, details in bonuses.items():
         _active_key = 'duration'
