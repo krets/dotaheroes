@@ -1,5 +1,6 @@
 import logging
 import io
+import os
 
 import vpk
 import vdf
@@ -26,6 +27,27 @@ _SPECIAL_IGNORE = [
 
 _PAK_CACHE = {}
 
+def _find_pak():
+    """ Search for steam and find pak file"""
+    pak_file = CONFIG['pak_file']
+    search_drives = 'CDEFG'
+
+    searches = []
+    for path in CONFIG['steam_search']:
+        test_path = os.path.join(path, pak_file)
+        if path[1] == ':':
+            for drive_letter in search_drives:
+                test_path = drive_letter + test_path[1:]
+                searches.append(test_path)
+        else:
+            searches.append(test_path)
+    for path in searches:
+        if os.path.isfile(path):
+            return path
+    else:
+        LOG.error("No pak path found")
+
+
 def _game_version():
     data = _pak("resource/localization/patchnotes/patchnotes_english.txt")
     parts = [_.split('_') for _ in data['patch']]
@@ -36,7 +58,8 @@ def _pak(key):
     pak_obj_key = '_pak_obj'
     pak = _PAK_CACHE.get(pak_obj_key)
     if pak is None:
-        pak = _PAK_CACHE[pak_obj_key] = vpk.open(CONFIG['pak01_dir'])
+        pak_file = _find_pak()
+        pak = _PAK_CACHE[pak_obj_key] = vpk.open(pak_file)
     data = _PAK_CACHE.get(key)
     if data is None:
         data = _PAK_CACHE[key] = vdf.parse(io.StringIO(pak[key].read().decode('utf8')))

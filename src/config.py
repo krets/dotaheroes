@@ -2,5 +2,10 @@
 
 CONFIG = {
     'npc_file': "scripts/npc/%s.txt",
-    'pak01_dir': "C:/Steam/SteamApps/common/dota 2 beta/game/dota/pak01_dir.vpk"
+    'steam_search': [
+        "C:/Program Files (x86)/Steam",
+        "C:/Program Files/Steam",
+        "C:/Steam",
+    ],
+    'pak_file': "SteamApps/common/dota 2 beta/game/dota/pak01_dir.vpk"
 }
