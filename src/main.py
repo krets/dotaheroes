@@ -112,8 +112,9 @@ def main():
 
             for i, details in enumerate(visions):
                 amount, is_night_vision, requires_active, title = details
+
                 classes = ['vision']
-                if len(visions) > 2:
+                if len([_ for _ in visions if _[1] == is_night_vision]) > 1:
                     classes.append('multiple')
                 if title is None:
                     title = 'base vision'
@@ -169,6 +170,9 @@ def extract_visions(hero):
                 continue
             night_only = 'night' in description
             for level, amount in enumerate(distances):
+                if amount <= 1:
+                    LOG.debug("Ignoring low/no bonus (%s %s %s)", hero['workshop_guide_name'], bonus, level+1)
+                    continue
                 comment = bonus
                 if level > 0:
                     comment += " level %d" % (level + 1)
@@ -177,7 +181,7 @@ def extract_visions(hero):
                     comment += " day"
                     visions.append((amount + vision_day, False, requires_active, comment))
     visions.sort(reverse=True)
-    if bonuses:
+    if bonuses and len(visions) > 2:
         LOG.debug("Yay, bonus vision for %s: %s", hero['workshop_guide_name'], bonuses)
     return visions
 
