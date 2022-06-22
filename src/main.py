@@ -1,3 +1,4 @@
+from collections import Counter
 import urllib.parse
 import logging
 
@@ -94,21 +95,35 @@ def hero_details():
 
 
 def main():
+    _vision_key_day = 'VisionDaytimeRange'
+    _vision_key_night = 'VisionNighttimeRange'
     data = []
     rows = hero_details()
+    _visions = [(_[_vision_key_day], _[_vision_key_night]) for _ in rows]
+    _visions_day, _visions_night = zip(*_visions)
+    _visions_day = Counter(_visions_day)
+    _visions_night = Counter(_visions_night)
+    vision_day_normal = _visions_day.most_common(1)[0][0]
+    vision_night_normal =_visions_night.most_common(1)[0][0]
+
     data.sort(key=lambda x: x['HERO'])
     version = npcdata._game_version()
+
     with open('../out/out.html', 'w') as out:
         out.write(HEADER % version)
 
         for hero in rows:
             img = 'images/%s_minimap_icon.png' % (urllib.parse.quote(hero["workshop_guide_name"].replace(' ', '_')))
             name = hero['workshop_guide_name']
-            vision_night = hero['VisionNighttimeRange']
-            vision_day = hero['VisionDaytimeRange']
+            vision_night = hero[_vision_key_night]
+            vision_day = hero[_vision_key_day]
             visions = extract_visions(hero)
 
-            hero_attr = f'<div class="hero"><img class="icon" src="{img}" title="{name}">'
+            hero_classes = []
+            if vision_day != vision_day_normal or vision_night != vision_night_normal:
+                hero_classes.append("abnormal_base_vision")
+
+            hero_attr = f'<div class="hero {" ".join(hero_classes)}"><img class="icon" src="{img}" title="{name}">'
 
             for i, details in enumerate(visions):
                 amount, is_night_vision, requires_active, title = details
@@ -135,7 +150,7 @@ def main():
                 width -=2 # border on all items.
                 class_str = ' '.join(classes)
                 hero_attr += (
-                    f'<div class="{class_str}" title="{title}" style="margin:{margin}px; '
+                    f'<div class="{" ".join(classes)}" title="{title}" style="margin:{margin}px; '
                     f'height: {width}px; width: {width}px; z-index: {i}"></div>')
 
             hero_attr += f"""

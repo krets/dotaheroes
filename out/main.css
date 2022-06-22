@@ -54,6 +54,12 @@ body{
     border: 1px;
     margin-bottom: 1em;
 }
+.hero.abnormal_base_vision{
+    background-color: green;
+}
+/*div.hero:has(div.multiple){*/
+/*    background-color: red;*/
+/*}*/
 .icon {
     position: absolute;
     display: block;
